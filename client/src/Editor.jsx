@@ -1,4 +1,3 @@
-// client/src/Editor.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import useUndoRedo from './hooks/useUndoRedo.js'
 import TonePicker from './components/TonePicker.jsx'
@@ -11,11 +10,14 @@ export default function Editor(){
     try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null') } catch { return null }
   },[])
 
-  const undo = useUndoRedo(saved?.text || 'Paste or type text here…')
+  // start with saved text or empty (placeholder shows)
+  const undo = useUndoRedo(saved?.text || '')
   const [sel, setSel] = useState(saved?.sel || [1,1]) // [formality,vibe]
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [emo] = useState(null) // keep if server supports emotion later
+
+  // remember last user-typed text (not AI rewrites)
+  const originalRef = useRef(saved?.text || '')
 
   // selection tracking
   const taRef = useRef(null)
@@ -34,17 +36,15 @@ export default function Editor(){
     return ()=>window.removeEventListener('keydown', h)
   },[undo])
 
-  // autosave
+  // debounce autosave
   useEffect(()=>{
-    localStorage.setItem(LS_KEY, JSON.stringify({ text: undo.value, sel }))
-  },[undo.value, sel])
-  useEffect(()=>{
-    const h = ()=> localStorage.setItem(LS_KEY, JSON.stringify({ text: undo.value, sel }))
-    window.addEventListener('beforeunload', h)
-    return ()=>window.removeEventListener('beforeunload', h)
+    const t = setTimeout(()=>{
+      localStorage.setItem(LS_KEY, JSON.stringify({ text: undo.value, sel }))
+    }, 600)
+    return ()=>clearTimeout(t)
   },[undo.value, sel])
 
-  // apply with live selection read from textarea
+  // apply with live selection
   const onApply = async (overrideSel = null) => {
     setError(''); setLoading(true)
 
@@ -61,9 +61,7 @@ export default function Editor(){
     lastReq.current = { text: inputText, formality: f, vibe: v, hasSel, s, e }
 
     try{
-      const args = { text: inputText, formality: f, vibe: v }
-      if (emo) args.emotion = emo
-      const out = await rewriteTone(args)
+      const out = await rewriteTone({ text: inputText, formality: f, vibe: v })
       if (hasSel){
         const next = undo.value.slice(0,s) + out + undo.value.slice(e)
         undo.set(next)
@@ -85,7 +83,7 @@ export default function Editor(){
     const { text, formality, vibe, hasSel, s, e } = lastReq.current
     try{
       setLoading(true); setError('')
-      const out = await rewriteTone({ text, formality, vibe, retry:true, ...(emo?{emotion:emo}:{}) })
+      const out = await rewriteTone({ text, formality, vibe, retry:true })
       if(hasSel){
         const next = undo.value.slice(0,s) + out + undo.value.slice(e)
         undo.set(next); setSelRange([s+out.length, s+out.length])
@@ -96,7 +94,8 @@ export default function Editor(){
     finally{ setLoading(false) }
   }
 
-  const onReset = ()=>{ undo.set('') }
+  // Reset back to last user-typed input (not blank)
+  const onReset = ()=>{ undo.set(originalRef.current || '') }
 
   return (
     <div className="container">
@@ -108,7 +107,7 @@ export default function Editor(){
             ref={taRef}
             className="textarea"
             value={undo.value}
-            onChange={(e)=>undo.set(e.target.value)}
+            onChange={(e)=>{ undo.set(e.target.value); originalRef.current = e.target.value; }}
             onSelect={(e)=> setSelRange([e.target.selectionStart, e.target.selectionEnd])}
             onMouseUp={(e)=> setSelRange([e.target.selectionStart, e.target.selectionEnd])}
             onKeyUp={(e)=> setSelRange([e.target.selectionStart, e.target.selectionEnd])}

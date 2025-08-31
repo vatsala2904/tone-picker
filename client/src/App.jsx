@@ -8,19 +8,25 @@ const LS_KEY = 'tone-picker-state-v1'
 export default function App(){
   // Always start on landing
   const [mode, setMode] = useState('landing')
-
-  // Compute if a saved session exists
   const hasSaved = !!localStorage.getItem(LS_KEY)
 
   return (
     <div className="app-wrap">
-      <Header onNewSession={()=> setMode('landing')} />
+      <Header
+        onNewSession={()=> setMode('landing')}
+        showNew={mode === 'editor'}
+      />
       {mode === 'landing'
-        ? <Landing
+        ? (
+          <Landing
             hasSaved={hasSaved}
-            onStart={()=>setMode('editor')}                 // resume if saved, or start fresh typing
-            onStartFresh={()=>{ localStorage.removeItem(LS_KEY); setMode('editor') }}
+            onStart={()=>setMode('editor')}
+            onStartFresh={()=>{
+              localStorage.removeItem(LS_KEY)
+              setMode('editor')
+            }}
           />
+        )
         : <Editor />
       }
     </div>

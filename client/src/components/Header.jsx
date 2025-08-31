@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 
-export default function Header({ onNewSession }){
+export default function Header({ onNewSession, showNew = true }){
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark')
   useEffect(()=>{
     document.body.dataset.theme = theme
@@ -14,9 +14,11 @@ export default function Header({ onNewSession }){
         <button className="button" onClick={()=>setTheme(theme==='dark'?'light':'dark')}>
           {theme==='dark' ? 'Light Mode' : 'Dark Mode'}
         </button>
-        <button className="button newsession" onClick={onNewSession}>
-          New Session
-        </button>
+        {showNew && (
+          <button className="button newsession" onClick={onNewSession}>
+            New Session
+          </button>
+        )}
         {/* GitHub button removed */}
       </div>
     </div>
