@@ -6,9 +6,10 @@ import Editor from './Editor.jsx'
 const LS_KEY = 'tone-picker-state-v1'
 
 export default function App(){
-  const [mode, setMode] = useState(() =>
-    localStorage.getItem(LS_KEY) ? 'editor' : 'landing'
-  )
+  // Always start on landing
+  const [mode, setMode] = useState('landing')
+
+  // Compute if a saved session exists
   const hasSaved = !!localStorage.getItem(LS_KEY)
 
   return (
@@ -17,11 +18,8 @@ export default function App(){
       {mode === 'landing'
         ? <Landing
             hasSaved={hasSaved}
-            onStart={()=>setMode('editor')}
-            onStartFresh={()=>{
-              localStorage.removeItem(LS_KEY)
-              setMode('editor')
-            }}
+            onStart={()=>setMode('editor')}                 // resume if saved, or start fresh typing
+            onStartFresh={()=>{ localStorage.removeItem(LS_KEY); setMode('editor') }}
           />
         : <Editor />
       }
